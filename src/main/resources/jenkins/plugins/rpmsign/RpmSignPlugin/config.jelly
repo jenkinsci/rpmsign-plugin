@@ -1,0 +1,33 @@
+<j:jelly xmlns:j="jelly:core" xmlns:f="/lib/form">
+
+  <f:entry title="${%Sign RPMs}">
+
+    <f:repeatable var="rpms" items="${instance.entries}" minimum="${1}" add="${%Add RPM(s)}">
+
+      <table width="100%">
+
+        <f:entry field="gpgKeyName" title="${%GPG Key}">
+          <f:select value="${rpms.gpgKeyName}" />
+        </f:entry>
+
+        <f:entry field="includes" title="${%Includes}">
+          <f:textbox value="${rpms.includes}" />
+        </f:entry>
+
+        <f:entry field="resign">
+          <f:checkbox value="${rpms.resign}" checked="${rpms.resign}" title="${%Resign?}" />
+        </f:entry>
+
+        <f:entry title="">
+          <div align="right">
+            <f:repeatableDeleteButton />
+          </div>
+        </f:entry>
+
+      </table>
+
+    </f:repeatable>
+
+  </f:entry>
+
+</j:jelly>
