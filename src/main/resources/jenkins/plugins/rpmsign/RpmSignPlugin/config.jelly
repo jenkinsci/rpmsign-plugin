@@ -14,6 +14,10 @@
           <f:textbox value="${rpms.includes}" />
         </f:entry>
 
+        <f:entry field="cmdlineOpts" title="${%Cmdline Options}">
+          <f:textbox value="${rpms.cmdlineOpts}" />
+        </f:entry>
+
         <f:entry field="resign">
           <f:checkbox value="${rpms.resign}" checked="${rpms.resign}" title="${%Resign?}" />
         </f:entry>

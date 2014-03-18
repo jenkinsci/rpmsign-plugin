@@ -91,6 +91,7 @@ public class RpmSignPlugin extends Recorder {
 
             rpmSignCommand.add("rpm", "--define");
             rpmSignCommand.add("_gpg_name " + gpgKey.getName());
+            rpmSignCommand.addTokenized(rpmEntry.getCmdlineOpts());
 
             if (rpmEntry.isResign()) {
               rpmSignCommand.add("--resign");
