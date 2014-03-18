@@ -6,9 +6,9 @@ import hudson.model.Descriptor;
 import org.kohsuke.stapler.DataBoundConstructor;
 
 public class Rpm extends AbstractDescribableImpl<Rpm> {
-  private String gpgKeyName;
-  private String includes;
-  private boolean resign;
+  private final String gpgKeyName;
+  private final String includes;
+  private final boolean resign;
 
   @DataBoundConstructor
   public Rpm(String gpgKeyName, String includes, boolean resign) {

@@ -77,6 +77,11 @@ public class RpmSignPlugin extends Recorder {
           listener.getLogger().println("[RpmSignPlugin] - Can't find GPG key: " + rpmEntry.getGpgKeyName());
           return false;
         }
+        
+        if (!isGpgKeyAvailable(gpgKey.getPrivateKey(), build, launcher, listener)){
+          listener.getLogger().println("[RpmSignPlugin] - Can't find GPG key: " + rpmEntry.getGpgKeyName());
+          return false;
+        }
 
         while (rpmGlobTokenizer.hasMoreTokens()) {
           String rpmGlob = rpmGlobTokenizer.nextToken();
@@ -119,7 +124,7 @@ public class RpmSignPlugin extends Recorder {
             Proc proc = launcher.launch(ps);
             int retcode = proc.join();
             if (retcode != 0) {
-              listener.getLogger().println("[RhnPush] - Failed publishing RPMs ...");
+              listener.getLogger().println("[RpmSignPlugin] - Failed signing RPMs ...");
               return false;
             }
           }
@@ -169,6 +174,22 @@ public class RpmSignPlugin extends Recorder {
     Proc proc = launcher.launch(ps);
     proc.join();
     is.close();
+  }
+  
+  private boolean isGpgKeyAvailable(String privateKey, AbstractBuild<?, ?> build, Launcher launcher, BuildListener listener) throws IOException, InterruptedException {
+    ArgumentListBuilder command = new ArgumentListBuilder();
+    command.add("gpg", "--fingerprint", privateKey);
+    Launcher.ProcStarter ps = launcher.new ProcStarter();
+    ps = ps.cmds(command).stdout(listener);
+    ps = ps.pwd(build.getWorkspace()).envs(build.getEnvironment(listener));
+    InputStream is = new ByteArrayInputStream(privateKey.getBytes());
+
+    ps.stdin(is);
+    Proc proc = launcher.launch(ps);
+    int retcode = proc.join();
+    is.close();
+    
+    return retcode == 0;
   }
 
   private GpgKey getGpgKey(String gpgKeyName) {
