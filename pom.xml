@@ -3,11 +3,11 @@
   <parent>
     <groupId>org.jenkins-ci.plugins</groupId>
     <artifactId>plugin</artifactId>
-    <version>1.555</version>
+    <version>1.557</version>
   </parent>
 
   <artifactId>rpmsign-plugin</artifactId>
-  <version>0.3-SNAPSHOT</version>
+  <version>0.4-SNAPSHOT</version>
   <packaging>hpi</packaging>
 
   <url>https://wiki.jenkins-ci.org/display/JENKINS/rpmsign+Plugin</url>
@@ -64,6 +64,18 @@
         <role>engineer</role>
       </roles>
       <timezone>0</timezone>
+    </developer>
+    <developer>
+      <id>elibus</id>
+      <name>Marco Tizzoni</name>
+      <email>marco.tizzoni@gmail.com</email>
+      <url>https://github.com/elibus/</url>
+      <organization>Freaknet</organization>
+      <organizationUrl>http://freaknet.org/</organizationUrl>
+      <roles>
+        <role>engineer</role>
+      </roles>
+      <timezone>+1</timezone>
     </developer>
   </developers>
   <scm>
