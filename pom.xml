@@ -7,7 +7,7 @@
   </parent>
 
   <artifactId>rpmsign-plugin</artifactId>
-  <version>0.4.1-SNAPSHOT</version>
+  <version>0.4.1</version>
   <packaging>hpi</packaging>
 
   <url>https://wiki.jenkins-ci.org/display/JENKINS/rpmsign+Plugin</url>
@@ -82,6 +82,6 @@
     <connection>scm:git:git://github.com/jenkinsci/rpmsign-plugin.git</connection>
     <developerConnection>scm:git:git@github.com:jenkinsci/rpmsign-plugin.git</developerConnection>
     <url>http://github.com/jenkinsci/rpmsign-plugin</url>
-    <tag>HEAD</tag>
+    <tag>rpmsign-plugin-0.4.1</tag>
   </scm>
 </project>
