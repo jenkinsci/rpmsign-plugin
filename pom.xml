@@ -3,11 +3,11 @@
   <parent>
     <groupId>org.jenkins-ci.plugins</groupId>
     <artifactId>plugin</artifactId>
-    <version>1.557</version>
+    <version>1.509</version>
   </parent>
 
   <artifactId>rpmsign-plugin</artifactId>
-  <version>0.5-SNAPSHOT</version>
+  <version>0.4.1-SNAPSHOT</version>
   <packaging>hpi</packaging>
 
   <url>https://wiki.jenkins-ci.org/display/JENKINS/rpmsign+Plugin</url>
