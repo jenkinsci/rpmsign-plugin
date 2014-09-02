@@ -69,13 +69,10 @@ public class RpmSignPlugin extends Recorder {
         StringTokenizer rpmGlobTokenizer = new StringTokenizer(rpmEntry.getIncludes(), ",");
 
         GpgKey gpgKey = getGpgKey(rpmEntry.getGpgKeyName());
-        if (gpgKey != null) {
-          listener.getLogger().println("[RpmSignPlugin] - Importing private key");
-          importGpgKey(gpgKey.getPrivateKey(), build, launcher, listener);
-          listener.getLogger().println("[RpmSignPlugin] - Imported private key");
-        } else {
-          listener.getLogger().println("[RpmSignPlugin] - Can't find GPG key: " + rpmEntry.getGpgKeyName());
-          return false;
+        if (gpgKey != null && gpgKey.getPrivateKey().getPlainText().length() > 0) {
+            listener.getLogger().println("[RpmSignPlugin] - Importing private key");
+            importGpgKey(gpgKey.getPrivateKey().getPlainText(), build, launcher, listener);
+            listener.getLogger().println("[RpmSignPlugin] - Imported private key");
         }
         
         if (!isGpgKeyAvailable(gpgKey, build, launcher, listener)){
