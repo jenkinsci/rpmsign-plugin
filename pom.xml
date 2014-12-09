@@ -10,7 +10,7 @@
   <version>0.4.3-SNAPSHOT</version>
   <packaging>hpi</packaging>
 
-  <url>https://wiki.jenkins-ci.org/display/JENKINS/rpmsign+Plugin</url>
+  <url>https://wiki.jenkins-ci.org/display/JENKINS/RPM+Sign+Plugin</url>
 
   <properties>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
