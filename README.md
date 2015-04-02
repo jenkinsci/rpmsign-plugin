@@ -4,5 +4,9 @@
 
 This plugin adds a post-build step to sign rpms using GPG.
 
+## Dependencies
+
+This plugin depends on both **gpg** and **expect** being installed on the host machine. 
+
 ## Usage
 
