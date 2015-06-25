@@ -30,6 +30,7 @@ import java.util.Collections;
 import java.util.List;
 import java.util.StringTokenizer;
 
+
 public class RpmSignPlugin extends Recorder {
 
   private List<Rpm> entries = Collections.emptyList();
@@ -37,6 +38,7 @@ public class RpmSignPlugin extends Recorder {
   private static final int EXPECT_BUFFER_SIZE = 4096;
 
   @DataBoundConstructor
+  @SuppressWarnings("unused")
   public RpmSignPlugin(List<Rpm> rpms) {
     this.entries = rpms;
     if (this.entries == null) {
@@ -49,12 +51,9 @@ public class RpmSignPlugin extends Recorder {
   }
 
   private boolean isPerformDeployment(AbstractBuild build) {
-    Result result = build.getResult();
-    if (result == null) {
-      return true;
-    }
+      Result result = build.getResult();
+      return result == null || result.isBetterOrEqualTo(Result.UNSTABLE);
 
-    return build.getResult().isBetterOrEqualTo(Result.UNSTABLE);
   }
 
   @SuppressWarnings("unused")
