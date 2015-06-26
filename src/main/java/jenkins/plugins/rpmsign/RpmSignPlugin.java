@@ -129,25 +129,25 @@ public class RpmSignPlugin extends Recorder {
     return true;
   }
 
-    private List<List<FilePath>> partitionRPMPackages(FilePath[] matchedRpms, PrintStream logger) {
+    private List<List<FilePath>> partitionRPMPackages(FilePath[] matchedRpms, PrintStream logger) throws IOException, InterruptedException {
         List<List<FilePath>> result = new ArrayList<List<FilePath>>();
 
         int currentSize = 0;
         List<FilePath> partition = new ArrayList<FilePath>();
         String packageName;
         for( FilePath rpmPackage : matchedRpms ){
-            packageName = rpmPackage.getName();
+            packageName = rpmPackage.toURI().normalize().getPath();
+
             if( packageName.length() > EXPECT_BUFFER_SIZE){
               logger.print("[RpmSignPlugin] - Cannot sign package, too long RPM path. Limit: "+ EXPECT_BUFFER_SIZE +"; Filename: "+packageName );
             } else {
               if (currentSize + packageName.length() > EXPECT_BUFFER_SIZE) {
-                result.add(partition);
+                  result.add(partition);
                 partition = new ArrayList<FilePath>();
                 currentSize = 0;
-              } else {
-                partition.add(rpmPackage);
-                currentSize += packageName.length();
               }
+              partition.add(rpmPackage);
+              currentSize += packageName.length();
             }
         }
 
@@ -177,7 +177,6 @@ public class RpmSignPlugin extends Recorder {
 
         return rpmSignCommand.toString();
     }
-
 
 
     private byte[] createExpectScriptFile(String signCommand, String passphrase)
