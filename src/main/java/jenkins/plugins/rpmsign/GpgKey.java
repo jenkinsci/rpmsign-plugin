@@ -12,14 +12,14 @@ public class GpgKey implements Serializable {
   private transient String id;
 
   private String name;
-  private String privateKey;
+  private Secret privateKey;
   private Secret passphrase;
 
   public GpgKey() {
   }
 
   @DataBoundConstructor
-  public GpgKey(String name, String privateKey, Secret passphrase) {
+  public GpgKey(String name, Secret privateKey, Secret passphrase) {
     this.name = name;
     this.privateKey = privateKey;
     this.passphrase = passphrase;
@@ -33,12 +33,12 @@ public class GpgKey implements Serializable {
 
   public int getUniqueId() {
     int result = name != null ? name.hashCode() : 0;
-    result = 31 * result + privateKey != null ? privateKey.hashCode() : 0;
+    result = 31 * result + (privateKey.getPlainText() != null ? privateKey.getPlainText().hashCode() : 0);
     result = 31 * result + (passphrase.getPlainText() != null ? passphrase.getPlainText().hashCode() : 0);
     return result;
   }
 
-  public String getPrivateKey() {
+  public Secret getPrivateKey() {
     return privateKey;
   }
 
