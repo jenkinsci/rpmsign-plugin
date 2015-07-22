@@ -1,0 +1,38 @@
+<div>Passphrase of the GPG key used for signing RPMs. This is kept in an encrypted form in the jenkins tree, and is only as secure as other encrypted passwords there.
+<p>
+As of RedHat rpm version 4.12.0.1-11 and gpg2 version 2.1 (first released in Fedora 22), rpm does not read the passphrase from stdin and pass it to gpg. On these systems some configuration is needed in order to pass the GPG key passphrase to rpm in an unattended manner.
+
+In the jenkin's user home directory, make the following modifications to .gnupg/gpg-agent.conf and .rpmmacros.
+
+<p>
+Add "allow-loopback-pinentry" option to gpg-agent:
+
+<pre>
+    echo "allow-loopback-pinentry" >> $HOME/.gnupg/gpg-agent.conf
+</pre>
+
+If the gpg-agent is running for the jenkins user, send it a HUP signal:
+<pre>
+    pkill -HUP gpg-agent
+</pre>
+
+Look at the default value of the RPM macro named "__gpg_sign_cmd" in /usr/lib/rpm/macros, or with rpm --eval:
+<pre>
+    rpm --eval "%__gpg_sign_cmd"
+</pre>
+
+Add  a "--pinentry-mode loopback" option to that macro in $HOME/.macros, as in this example for Fedora 22:
+
+<pre>
+    cat << \EOD >> $HOME/.rpmmacros
+%__gpg_sign_cmd %{__gpg} \
+    gpg --no-verbose --no-armor --pinentry-mode loopback \
+    %{?_gpg_digest_algo:--digest-algo %{_gpg_digest_algo}} \
+    --no-secmem-warning \
+    -u "%{_gpg_name}" -sbo %{__signature_filename} %{__plaintext_filename}
+EOD
+</pre>
+
+</div>
+
+
