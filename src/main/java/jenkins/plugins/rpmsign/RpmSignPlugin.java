@@ -144,13 +144,17 @@ public class RpmSignPlugin extends Recorder {
     try {
       writer.print("spawn ");
       writer.println(signCommand);
-      writer.println("expect \"Enter pass phrase: \"");
-      writer.print("send -- \"");
+      writer.println("expect {");
+      writer.print("-re \"Enter pass *phrase: *\" { log_user 0; send -- \"");
       writer.print(passphrase);
-      writer.println("\r\"");
-      writer.println("expect eof");
-      writer.println("catch wait rc");
-      writer.println("exit [lindex $rc 3]");
+      writer.println("\r\"; log_user 1; }");
+      writer.println("eof { catch wait rc; exit [lindex $rc 3]; }");
+      writer.println("timeout { close; exit; }");
+      writer.println("}");
+      writer.println("expect {");
+      writer.println("eof { catch wait rc; exit [lindex $rc 3]; }");
+      writer.println("timeout close");
+      writer.println("}");
       writer.println();
 
       writer.flush();
