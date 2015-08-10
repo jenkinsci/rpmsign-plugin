@@ -21,7 +21,7 @@ Look at the default value of the RPM macro named "__gpg_sign_cmd" in /usr/lib/rp
     rpm --eval "%__gpg_sign_cmd"
 </pre>
 
-Add  a "--pinentry-mode loopback" option to that macro in $HOME/.macros, as in this example for Fedora 22:
+Add  a "--pinentry-mode loopback" option to __gpg_sign_cmd in $HOME/.rpmmacros, as in this example for Fedora 22:
 
 <pre>
     cat << \EOD >> $HOME/.rpmmacros
@@ -34,5 +34,3 @@ EOD
 </pre>
 
 </div>
-
-
