@@ -52,8 +52,8 @@ public class RpmSignPlugin extends Recorder {
   }
 
   private boolean isPerformDeployment(AbstractBuild build) {
-      Result result = build.getResult();
-      return result == null || result.isBetterOrEqualTo(Result.UNSTABLE);
+    Result result = build.getResult();
+    return result == null || result.isBetterOrEqualTo(Result.UNSTABLE);
 
   }
 
@@ -75,12 +75,12 @@ public class RpmSignPlugin extends Recorder {
           throw new InterruptedException("No GPG key is available.");
         }
         if (gpgKey.getPrivateKey().getPlainText().length() > 0) {
-            listener.getLogger().println("[RpmSignPlugin] - Importing private key");
-            importGpgKey(gpgKey.getPrivateKey().getPlainText(), build, launcher, listener);
-            listener.getLogger().println("[RpmSignPlugin] - Imported private key");
+          listener.getLogger().println("[RpmSignPlugin] - Importing private key");
+          importGpgKey(gpgKey.getPrivateKey().getPlainText(), build, launcher, listener);
+          listener.getLogger().println("[RpmSignPlugin] - Imported private key");
         }
 
-        if (!isGpgKeyAvailable(gpgKey, build, launcher, listener)){
+        if (!isGpgKeyAvailable(gpgKey, build, launcher, listener)) {
           listener.getLogger().println("[RpmSignPlugin] - Can't find GPG key: " + rpmEntry.getGpgKeyName());
           return false;
         }
@@ -98,35 +98,35 @@ public class RpmSignPlugin extends Recorder {
           if (ArrayUtils.isEmpty(matchedRpms)) {
             listener.getLogger().println("[RpmSignPlugin] - No RPMs matching " + rpmGlob);
           } else {
-              List<List<FilePath>> partitionList = partitionRPMPackages( matchedRpms, listener.getLogger() );
-              int i = 1, partitionCount = partitionList.size();
+            List<List<FilePath>> partitionList = partitionRPMPackages(matchedRpms, listener.getLogger());
+            int i = 1, partitionCount = partitionList.size();
 
-              for( List<FilePath> rpmsPackagePartition :  partitionList ){
-                    String logPrefix = "[RpmSignPlugin] ["+i+"/"+partitionCount+"] - ";
+            for (List<FilePath> rpmsPackagePartition : partitionList) {
+              String logPrefix = "[RpmSignPlugin] [" + i + "/" + partitionCount + "] - ";
 
-                    String rpmCommandLine = buildRpmSignCmd( rpmsPackagePartition,rpmEntry,gpgKey );
-                    listener.getLogger().println( logPrefix +"Running " + rpmCommandLine);
+              String rpmCommandLine = buildRpmSignCmd(rpmsPackagePartition, rpmEntry, gpgKey);
+              listener.getLogger().println(logPrefix + "Running " + rpmCommandLine);
 
-                    ArgumentListBuilder expectCommand = new ArgumentListBuilder();
-                    expectCommand.add("expect", "-");
+              ArgumentListBuilder expectCommand = new ArgumentListBuilder();
+              expectCommand.add("expect", "-");
 
-                    Launcher.ProcStarter ps = launcher.new ProcStarter();
-                    ps = ps.cmds(expectCommand).stdout(listener);
-                    ps = ps.pwd(workspace).envs(build.getEnvironment(listener));
+              Launcher.ProcStarter ps = launcher.new ProcStarter();
+              ps = ps.cmds(expectCommand).stdout(listener);
+              ps = ps.pwd(workspace).envs(build.getEnvironment(listener));
 
-                    byte[] expectScript = createExpectScriptFile(rpmCommandLine, gpgKey.getPassphrase().getPlainText());
-                    ByteArrayInputStream is = new ByteArrayInputStream(expectScript);
-                    ps.stdin(is);
+              byte[] expectScript = createExpectScriptFile(rpmCommandLine, gpgKey.getPassphrase().getPlainText());
+              ByteArrayInputStream is = new ByteArrayInputStream(expectScript);
+              ps.stdin(is);
 
-                    Proc proc = launcher.launch(ps);
-                    int returnCode = proc.join();
-                    if (returnCode != 0) {
-                        listener.getLogger().println( logPrefix+"Failed signing RPMs ...");
-                        return false;
-                    }
-                    i++;
-                }
+              Proc proc = launcher.launch(ps);
+              int returnCode = proc.join();
+              if (returnCode != 0) {
+                listener.getLogger().println(logPrefix + "Failed signing RPMs ...");
+                return false;
               }
+              i++;
+            }
+          }
         }
       }
 
@@ -137,61 +137,60 @@ public class RpmSignPlugin extends Recorder {
     return true;
   }
 
-    private List<List<FilePath>> partitionRPMPackages(FilePath[] matchedRpms, PrintStream logger) throws IOException, InterruptedException {
-        List<List<FilePath>> result = new ArrayList<>();
+  private List<List<FilePath>> partitionRPMPackages(FilePath[] matchedRpms, PrintStream logger) throws IOException, InterruptedException {
+    List<List<FilePath>> result = new ArrayList<>();
 
-        int currentSize = 0;
-        List<FilePath> partition = new ArrayList<>();
-        String packageName;
-        for( FilePath rpmPackage : matchedRpms ){
-            packageName = rpmPackage.toURI().normalize().getPath();
+    int currentSize = 0;
+    List<FilePath> partition = new ArrayList<>();
+    String packageName;
+    for (FilePath rpmPackage : matchedRpms) {
+      packageName = rpmPackage.toURI().normalize().getPath();
 
-            if( packageName.length() > EXPECT_BUFFER_SIZE){
-              logger.print("[RpmSignPlugin] - Cannot sign package, too long RPM path. Limit: "+ EXPECT_BUFFER_SIZE +"; Filename: "+packageName );
-            } else {
-              if (currentSize + packageName.length() > EXPECT_BUFFER_SIZE) {
-                  result.add(partition);
-                partition = new ArrayList<>();
-                currentSize = 0;
-              }
-              partition.add(rpmPackage);
-              currentSize += packageName.length();
-            }
+      if (packageName.length() > EXPECT_BUFFER_SIZE) {
+        logger.print("[RpmSignPlugin] - Cannot sign package, too long RPM path. Limit: " + EXPECT_BUFFER_SIZE + "; Filename: " + packageName);
+      } else {
+        if (currentSize + packageName.length() > EXPECT_BUFFER_SIZE) {
+          result.add(partition);
+          partition = new ArrayList<>();
+          currentSize = 0;
         }
-
-        if( partition.size() > 0 ){
-            result.add(partition);
-        }
-
-        return result;
+        partition.add(rpmPackage);
+        currentSize += packageName.length();
+      }
     }
 
-    private String buildRpmSignCmd(List<FilePath> rpmFiles, Rpm rpmEntry, GpgKey gpgKey) throws IOException, InterruptedException {
-        ArgumentListBuilder rpmSignCommand = new ArgumentListBuilder();
-
-        rpmSignCommand.add("rpm", "--define");
-        rpmSignCommand.add("_gpg_name " + gpgKey.getName());
-        rpmSignCommand.addTokenized(rpmEntry.getCmdlineOpts());
-
-        if (rpmEntry.isResign()) {
-            rpmSignCommand.add("--resign");
-        } else {
-            rpmSignCommand.add("--addsign");
-        }
-
-        for (FilePath rpmFilePath : rpmFiles) {
-            rpmSignCommand.add(rpmFilePath.toURI().normalize().getPath());
-        }
-
-        return rpmSignCommand.toString();
+    if (partition.size() > 0) {
+      result.add(partition);
     }
 
+    return result;
+  }
 
-    private byte[] createExpectScriptFile(String signCommand, String passphrase)
-      throws IOException {
+  private String buildRpmSignCmd(List<FilePath> rpmFiles, Rpm rpmEntry, GpgKey gpgKey) throws IOException, InterruptedException {
+    ArgumentListBuilder rpmSignCommand = new ArgumentListBuilder();
+
+    rpmSignCommand.add("rpm", "--define");
+    rpmSignCommand.add("_gpg_name " + gpgKey.getName());
+    rpmSignCommand.addTokenized(rpmEntry.getCmdlineOpts());
+
+    if (rpmEntry.isResign()) {
+      rpmSignCommand.add("--resign");
+    } else {
+      rpmSignCommand.add("--addsign");
+    }
+
+    for (FilePath rpmFilePath : rpmFiles) {
+      rpmSignCommand.add(rpmFilePath.toURI().normalize().getPath());
+    }
+
+    return rpmSignCommand.toString();
+  }
+
+  private byte[] createExpectScriptFile(String signCommand, String passphrase)
+          throws IOException {
     final ByteArrayOutputStream baos = new ByteArrayOutputStream(512);
 
-    try (PrintWriter writer = new PrintWriter(new OutputStreamWriter(baos,StandardCharsets.UTF_8))) {
+    try (PrintWriter writer = new PrintWriter(new OutputStreamWriter(baos, StandardCharsets.UTF_8))) {
       writer.print("spawn ");
       writer.println(signCommand);
       writer.println("expect {");
@@ -220,11 +219,11 @@ public class RpmSignPlugin extends Recorder {
     ps = ps.cmds(command).stdout(listener);
     ps = ps.pwd(build.getWorkspace()).envs(build.getEnvironment(listener));
 
-      try (InputStream is = new ByteArrayInputStream(privateKey.getBytes(StandardCharsets.UTF_8))) {
-          ps.stdin(is);
-          Proc proc = launcher.launch(ps);
-          proc.join();
-      }
+    try (InputStream is = new ByteArrayInputStream(privateKey.getBytes(StandardCharsets.UTF_8))) {
+      ps.stdin(is);
+      Proc proc = launcher.launch(ps);
+      proc.join();
+    }
   }
 
   private boolean isGpgKeyAvailable(GpgKey gpgKey, AbstractBuild<?, ?> build, Launcher launcher, BuildListener listener) throws IOException, InterruptedException {

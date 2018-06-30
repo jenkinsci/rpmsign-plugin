@@ -6,6 +6,7 @@ import hudson.model.Descriptor;
 import org.kohsuke.stapler.DataBoundConstructor;
 
 public class Rpm extends AbstractDescribableImpl<Rpm> {
+
   private final String gpgKeyName;
   private final String includes;
   private final String cmdlineOpts;
@@ -30,13 +31,14 @@ public class Rpm extends AbstractDescribableImpl<Rpm> {
   public String getCmdlineOpts() {
     return cmdlineOpts;
   }
-    
+
   public boolean isResign() {
     return resign;
   }
 
   @Extension
   public static class DescriptorImpl extends Descriptor<Rpm> {
+
     @Override
     public String getDisplayName() {
       return ""; // unused

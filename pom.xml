@@ -34,13 +34,13 @@
     </plugins>
   </build>
 
- <dependencies>
-   <dependency>
-     <groupId>com.google.code.findbugs</groupId>
-     <artifactId>jsr305</artifactId>
-     <version>3.0.2</version>
-   </dependency>
- </dependencies>
+  <dependencies>
+    <dependency>
+      <groupId>com.google.code.findbugs</groupId>
+      <artifactId>jsr305</artifactId>
+      <version>3.0.2</version>
+    </dependency>
+  </dependencies>
 
   <repositories>
     <repository>
