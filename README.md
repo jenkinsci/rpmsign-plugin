@@ -1,6 +1,6 @@
 # Jenkins RPM Sign Plugin
 
-[![Build Status](https://buildhive.cloudbees.com/job/jenkinsci/job/rpmsign-plugin/badge/icon)](https://buildhive.cloudbees.com/job/jenkinsci/job/rpmsign-plugin/)
+[![Build Status](https://ci.jenkins.io/buildStatus/icon?job=Plugins/rpmsign-plugin/master)](https://ci.jenkins.io/job/Plugins/job/rpmsign-plugin/job/master/)
 
 This plugin adds a post-build step to sign rpms using GPG.
 
