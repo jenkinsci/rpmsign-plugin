@@ -3,17 +3,18 @@
   <parent>
     <groupId>org.jenkins-ci.plugins</groupId>
     <artifactId>plugin</artifactId>
-    <version>1.480</version>
+    <version>2.2</version>
   </parent>
 
   <artifactId>rpmsign-plugin</artifactId>
-  <version>0.4.7-SNAPSHOT</version>
+  <version>0.5.0-SNAPSHOT</version>
   <packaging>hpi</packaging>
 
-  <url>https://wiki.jenkins-ci.org/display/JENKINS/RPM+Sign+Plugin</url>
+  <url>https://plugins.jenkins.io/rpmsign-plugin</url>
 
   <properties>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+    <jenkins.version>1.609.1</jenkins.version>
   </properties>
 
   <build>
@@ -32,6 +33,14 @@
       </plugin>
     </plugins>
   </build>
+
+ <dependencies>
+   <dependency>
+     <groupId>com.google.code.findbugs</groupId>
+     <artifactId>jsr305</artifactId>
+     <version>3.0.2</version>
+   </dependency>
+ </dependencies>
 
   <repositories>
     <repository>

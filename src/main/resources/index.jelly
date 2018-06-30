@@ -1,3 +1,4 @@
+<?jelly escape-by-default='true'?>
 <div>
   Signs RPMs using GPG.
 </div>

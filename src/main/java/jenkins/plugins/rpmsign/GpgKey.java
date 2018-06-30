@@ -6,6 +6,7 @@ import org.kohsuke.stapler.DataBoundConstructor;
 import java.io.Serializable;
 
 public class GpgKey implements Serializable {
+  static final long serialVersionUID = 42L;
 
   @Deprecated
   @SuppressWarnings("unused")

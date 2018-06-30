@@ -25,11 +25,11 @@ import org.kohsuke.stapler.QueryParameter;
 import org.kohsuke.stapler.StaplerRequest;
 
 import java.io.*;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.StringTokenizer;
-
 
 public class RpmSignPlugin extends Recorder {
 
@@ -46,6 +46,7 @@ public class RpmSignPlugin extends Recorder {
     }
   }
 
+  @Override
   public BuildStepMonitor getRequiredMonitorService() {
     return BuildStepMonitor.NONE;
   }
@@ -70,12 +71,15 @@ public class RpmSignPlugin extends Recorder {
         StringTokenizer rpmGlobTokenizer = new StringTokenizer(rpmEntry.getIncludes(), ",");
 
         GpgKey gpgKey = getGpgKey(rpmEntry.getGpgKeyName());
-        if (gpgKey != null && gpgKey.getPrivateKey().getPlainText().length() > 0) {
+        if (gpgKey == null) {
+          throw new InterruptedException("No GPG key is available.");
+        }
+        if (gpgKey.getPrivateKey().getPlainText().length() > 0) {
             listener.getLogger().println("[RpmSignPlugin] - Importing private key");
             importGpgKey(gpgKey.getPrivateKey().getPlainText(), build, launcher, listener);
             listener.getLogger().println("[RpmSignPlugin] - Imported private key");
         }
-        
+
         if (!isGpgKeyAvailable(gpgKey, build, launcher, listener)){
           listener.getLogger().println("[RpmSignPlugin] - Can't find GPG key: " + rpmEntry.getGpgKeyName());
           return false;
@@ -86,7 +90,11 @@ public class RpmSignPlugin extends Recorder {
 
           listener.getLogger().println("[RpmSignPlugin] - Publishing " + rpmGlob);
 
-          FilePath[] matchedRpms = build.getWorkspace().list(rpmGlob);
+          FilePath workspace = build.getWorkspace();
+          if (workspace == null) {
+            throw new IllegalStateException("Could not get a workspace.");
+          }
+          FilePath[] matchedRpms = workspace.list(rpmGlob);
           if (ArrayUtils.isEmpty(matchedRpms)) {
             listener.getLogger().println("[RpmSignPlugin] - No RPMs matching " + rpmGlob);
           } else {
@@ -104,7 +112,7 @@ public class RpmSignPlugin extends Recorder {
 
                     Launcher.ProcStarter ps = launcher.new ProcStarter();
                     ps = ps.cmds(expectCommand).stdout(listener);
-                    ps = ps.pwd(build.getWorkspace()).envs(build.getEnvironment(listener));
+                    ps = ps.pwd(workspace).envs(build.getEnvironment(listener));
 
                     byte[] expectScript = createExpectScriptFile(rpmCommandLine, gpgKey.getPassphrase().getPlainText());
                     ByteArrayInputStream is = new ByteArrayInputStream(expectScript);
@@ -130,10 +138,10 @@ public class RpmSignPlugin extends Recorder {
   }
 
     private List<List<FilePath>> partitionRPMPackages(FilePath[] matchedRpms, PrintStream logger) throws IOException, InterruptedException {
-        List<List<FilePath>> result = new ArrayList<List<FilePath>>();
+        List<List<FilePath>> result = new ArrayList<>();
 
         int currentSize = 0;
-        List<FilePath> partition = new ArrayList<FilePath>();
+        List<FilePath> partition = new ArrayList<>();
         String packageName;
         for( FilePath rpmPackage : matchedRpms ){
             packageName = rpmPackage.toURI().normalize().getPath();
@@ -143,7 +151,7 @@ public class RpmSignPlugin extends Recorder {
             } else {
               if (currentSize + packageName.length() > EXPECT_BUFFER_SIZE) {
                   result.add(partition);
-                partition = new ArrayList<FilePath>();
+                partition = new ArrayList<>();
                 currentSize = 0;
               }
               partition.add(rpmPackage);
@@ -183,8 +191,7 @@ public class RpmSignPlugin extends Recorder {
       throws IOException {
     final ByteArrayOutputStream baos = new ByteArrayOutputStream(512);
 
-    final PrintWriter writer = new PrintWriter(new OutputStreamWriter(baos));
-    try {
+    try (PrintWriter writer = new PrintWriter(new OutputStreamWriter(baos,StandardCharsets.UTF_8))) {
       writer.print("spawn ");
       writer.println(signCommand);
       writer.println("expect {");
@@ -201,8 +208,6 @@ public class RpmSignPlugin extends Recorder {
       writer.println();
 
       writer.flush();
-    } finally {
-      writer.close();
     }
 
     return baos.toByteArray();
@@ -215,14 +220,13 @@ public class RpmSignPlugin extends Recorder {
     ps = ps.cmds(command).stdout(listener);
     ps = ps.pwd(build.getWorkspace()).envs(build.getEnvironment(listener));
 
-    InputStream is = new ByteArrayInputStream(privateKey.getBytes());
-
-    ps.stdin(is);
-    Proc proc = launcher.launch(ps);
-    proc.join();
-    is.close();
+      try (InputStream is = new ByteArrayInputStream(privateKey.getBytes(StandardCharsets.UTF_8))) {
+          ps.stdin(is);
+          Proc proc = launcher.launch(ps);
+          proc.join();
+      }
   }
-  
+
   private boolean isGpgKeyAvailable(GpgKey gpgKey, AbstractBuild<?, ?> build, Launcher launcher, BuildListener listener) throws IOException, InterruptedException {
     ArgumentListBuilder command = new ArgumentListBuilder();
     command.add("gpg", "--fingerprint", gpgKey.getName());
@@ -235,7 +239,11 @@ public class RpmSignPlugin extends Recorder {
   }
 
   private GpgKey getGpgKey(String gpgKeyName) {
-    GpgSignerDescriptor gpgSignerDescriptor = Jenkins.getInstance().getDescriptorByType(GpgSignerDescriptor.class);
+    Jenkins jenkins = Jenkins.getInstance();
+    if (jenkins == null) {
+      throw new IllegalStateException("Could not get a Jenkins instance.");
+    }
+    GpgSignerDescriptor gpgSignerDescriptor = jenkins.getDescriptorByType(GpgSignerDescriptor.class);
     if (!StringUtils.isEmpty(gpgKeyName) && !gpgSignerDescriptor.getGpgKeys().isEmpty()) {
       for (GpgKey gpgKey : gpgSignerDescriptor.getGpgKeys()) {
         if (StringUtils.equals(gpgKeyName, gpgKey.getName())) {
@@ -257,7 +265,7 @@ public class RpmSignPlugin extends Recorder {
       return true;
     }
 
-    private volatile List<GpgKey> gpgKeys = new ArrayList<GpgKey>();
+    private volatile List<GpgKey> gpgKeys = new ArrayList<>();
 
     public GpgSignerDescriptor() {
       load();
@@ -300,8 +308,9 @@ public class RpmSignPlugin extends Recorder {
     }
 
     public FormValidation doCheckIncludes(@AncestorInPath AbstractProject project, @QueryParameter String value) throws IOException, InterruptedException {
-      if (project.getSomeWorkspace() != null) {
-        String msg = project.getSomeWorkspace().validateAntFileMask(value);
+      FilePath workspace = project.getSomeWorkspace();
+      if (workspace != null) {
+        String msg = workspace.validateAntFileMask(value);
         if (msg != null) {
           return FormValidation.error(msg);
         }
