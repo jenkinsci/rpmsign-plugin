@@ -35,8 +35,6 @@ public class RpmSignPlugin extends Recorder {
 
   private List<Rpm> entries = Collections.emptyList();
 
-  private static final int EXPECT_BUFFER_SIZE = 4096;
-
   @DataBoundConstructor
   @SuppressWarnings("unused")
   public RpmSignPlugin(List<Rpm> rpms) {
@@ -98,13 +96,12 @@ public class RpmSignPlugin extends Recorder {
           if (ArrayUtils.isEmpty(matchedRpms)) {
             listener.getLogger().println("[RpmSignPlugin] - No RPMs matching " + rpmGlob);
           } else {
-            List<List<FilePath>> partitionList = partitionRPMPackages(matchedRpms, listener.getLogger());
-            int i = 1, partitionCount = partitionList.size();
 
-            for (List<FilePath> rpmsPackagePartition : partitionList) {
-              String logPrefix = "[RpmSignPlugin] [" + i + "/" + partitionCount + "] - ";
+            int i = 0;
+            for (FilePath rpm : matchedRpms) {
+              String logPrefix = "[RpmSignPlugin] [" + i + "/" + matchedRpms.length + "] - ";
 
-              String rpmCommandLine = buildRpmSignCmd(rpmsPackagePartition, rpmEntry, gpgKey);
+              String rpmCommandLine = buildRpmSignCmd(rpm, rpmEntry, gpgKey);
               listener.getLogger().println(logPrefix + "Running " + rpmCommandLine);
 
               ArgumentListBuilder expectCommand = new ArgumentListBuilder();
@@ -121,7 +118,7 @@ public class RpmSignPlugin extends Recorder {
               Proc proc = launcher.launch(ps);
               int returnCode = proc.join();
               if (returnCode != 0) {
-                listener.getLogger().println(logPrefix + "Failed signing RPMs ...");
+                listener.getLogger().println(logPrefix + "Failed signing RPM ...");
                 return false;
               }
               i++;
@@ -137,36 +134,7 @@ public class RpmSignPlugin extends Recorder {
     return true;
   }
 
-  private List<List<FilePath>> partitionRPMPackages(FilePath[] matchedRpms, PrintStream logger) throws IOException, InterruptedException {
-    List<List<FilePath>> result = new ArrayList<>();
-
-    int currentSize = 0;
-    List<FilePath> partition = new ArrayList<>();
-    String packageName;
-    for (FilePath rpmPackage : matchedRpms) {
-      packageName = rpmPackage.toURI().normalize().getPath();
-
-      if (packageName.length() > EXPECT_BUFFER_SIZE) {
-        logger.print("[RpmSignPlugin] - Cannot sign package, too long RPM path. Limit: " + EXPECT_BUFFER_SIZE + "; Filename: " + packageName);
-      } else {
-        if (currentSize + packageName.length() > EXPECT_BUFFER_SIZE) {
-          result.add(partition);
-          partition = new ArrayList<>();
-          currentSize = 0;
-        }
-        partition.add(rpmPackage);
-        currentSize += packageName.length();
-      }
-    }
-
-    if (partition.size() > 0) {
-      result.add(partition);
-    }
-
-    return result;
-  }
-
-  private String buildRpmSignCmd(List<FilePath> rpmFiles, Rpm rpmEntry, GpgKey gpgKey) throws IOException, InterruptedException {
+  private String buildRpmSignCmd(FilePath rpmFile, Rpm rpmEntry, GpgKey gpgKey) throws IOException, InterruptedException {
     ArgumentListBuilder rpmSignCommand = new ArgumentListBuilder();
 
     rpmSignCommand.add("rpm", "--define");
@@ -179,9 +147,7 @@ public class RpmSignPlugin extends Recorder {
       rpmSignCommand.add("--addsign");
     }
 
-    for (FilePath rpmFilePath : rpmFiles) {
-      rpmSignCommand.add(rpmFilePath.toURI().normalize().getPath());
-    }
+    rpmSignCommand.add(rpmFile.toURI().normalize().getPath());
 
     return rpmSignCommand.toString();
   }
