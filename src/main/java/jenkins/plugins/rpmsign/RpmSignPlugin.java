@@ -97,7 +97,7 @@ public class RpmSignPlugin extends Recorder {
             listener.getLogger().println("[RpmSignPlugin] - No RPMs matching " + rpmGlob);
           } else {
 
-            int i = 0;
+            int i = 1;
             for (FilePath rpm : matchedRpms) {
               String logPrefix = "[RpmSignPlugin] [" + i + "/" + matchedRpms.length + "] - ";
 
