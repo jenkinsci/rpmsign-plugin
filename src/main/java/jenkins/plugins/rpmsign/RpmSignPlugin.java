@@ -1,5 +1,6 @@
 package jenkins.plugins.rpmsign;
 
+import hudson.AbortException;
 import hudson.Extension;
 import hudson.FilePath;
 import hudson.Launcher;
@@ -8,6 +9,8 @@ import hudson.model.AbstractBuild;
 import hudson.model.AbstractProject;
 import hudson.model.BuildListener;
 import hudson.model.Result;
+import hudson.model.Run;
+import hudson.model.TaskListener;
 import hudson.tasks.BuildStepDescriptor;
 import hudson.tasks.BuildStepMonitor;
 import hudson.tasks.Publisher;
@@ -16,11 +19,14 @@ import hudson.util.ArgumentListBuilder;
 import hudson.util.FormValidation;
 import hudson.util.ListBoxModel;
 import jenkins.model.Jenkins;
+import jenkins.tasks.SimpleBuildStep;
 import net.sf.json.JSONObject;
 import org.apache.commons.lang.ArrayUtils;
 import org.apache.commons.lang.StringUtils;
+import org.jenkinsci.Symbol;
 import org.kohsuke.stapler.AncestorInPath;
 import org.kohsuke.stapler.DataBoundConstructor;
+import org.kohsuke.stapler.DataBoundSetter;
 import org.kohsuke.stapler.QueryParameter;
 import org.kohsuke.stapler.StaplerRequest;
 
@@ -30,18 +36,24 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.StringTokenizer;
+import javax.annotation.Nonnull;
 
-public class RpmSignPlugin extends Recorder {
+public class RpmSignPlugin extends Recorder implements SimpleBuildStep {
 
-  private List<Rpm> entries = Collections.emptyList();
+  private List<Rpm> rpms;
 
   @DataBoundConstructor
   @SuppressWarnings("unused")
   public RpmSignPlugin(List<Rpm> rpms) {
-    this.entries = rpms;
-    if (this.entries == null) {
-      this.entries = Collections.emptyList();
+    this.rpms = rpms;
+    if (this.rpms == null) {
+      this.rpms = Collections.emptyList();
     }
+  }
+
+  @DataBoundSetter
+  public void setRpms(final List<Rpm> rpms) {
+    this.rpms = rpms;
   }
 
   @Override
@@ -49,38 +61,38 @@ public class RpmSignPlugin extends Recorder {
     return BuildStepMonitor.NONE;
   }
 
-  private boolean isPerformDeployment(AbstractBuild build) {
+  private boolean isPerformDeployment(final Run<?, ?> build) {
     Result result = build.getResult();
     return result == null || result.isBetterOrEqualTo(Result.UNSTABLE);
 
   }
 
   @SuppressWarnings("unused")
-  public List<Rpm> getEntries() {
-    return entries;
+  public List<Rpm> getRpms() {
+    return rpms;
   }
 
   @Override
-  public boolean perform(AbstractBuild<?, ?> build, Launcher launcher, BuildListener listener) throws InterruptedException, IOException {
+  public void perform(@Nonnull final Run<?, ?> build, @Nonnull final FilePath workspace, @Nonnull final Launcher launcher, @Nonnull final TaskListener listener) throws InterruptedException, IOException {
     if (isPerformDeployment(build)) {
       listener.getLogger().println("[RpmSignPlugin] - Starting signing RPMs ...");
 
-      for (Rpm rpmEntry : entries) {
+      for (Rpm rpmEntry : rpms) {
         StringTokenizer rpmGlobTokenizer = new StringTokenizer(rpmEntry.getIncludes(), ",");
 
         GpgKey gpgKey = getGpgKey(rpmEntry.getGpgKeyName());
         if (gpgKey == null) {
-          throw new InterruptedException("No GPG key is available.");
+          throw new AbortException("No GPG key is available.");
         }
         if (gpgKey.getPrivateKey().getPlainText().length() > 0) {
           listener.getLogger().println("[RpmSignPlugin] - Importing private key");
-          importGpgKey(gpgKey.getPrivateKey().getPlainText(), build, launcher, listener);
+          importGpgKey(gpgKey.getPrivateKey().getPlainText(), build, workspace, launcher, listener);
           listener.getLogger().println("[RpmSignPlugin] - Imported private key");
         }
 
-        if (!isGpgKeyAvailable(gpgKey, build, launcher, listener)) {
+        if (!isGpgKeyAvailable(gpgKey, build, workspace, launcher, listener)) {
           listener.getLogger().println("[RpmSignPlugin] - Can't find GPG key: " + rpmEntry.getGpgKeyName());
-          return false;
+          throw new AbortException("Can't find GPG key: " + rpmEntry.getGpgKeyName());
         }
 
         while (rpmGlobTokenizer.hasMoreTokens()) {
@@ -88,10 +100,6 @@ public class RpmSignPlugin extends Recorder {
 
           listener.getLogger().println("[RpmSignPlugin] - Publishing " + rpmGlob);
 
-          FilePath workspace = build.getWorkspace();
-          if (workspace == null) {
-            throw new IllegalStateException("Could not get a workspace.");
-          }
           FilePath[] matchedRpms = workspace.list(rpmGlob);
           if (ArrayUtils.isEmpty(matchedRpms)) {
             listener.getLogger().println("[RpmSignPlugin] - No RPMs matching " + rpmGlob);
@@ -119,7 +127,7 @@ public class RpmSignPlugin extends Recorder {
               int returnCode = proc.join();
               if (returnCode != 0) {
                 listener.getLogger().println(logPrefix + "Failed signing RPM ...");
-                return false;
+                throw new AbortException("Failed signing RPM. returnCode: " + returnCode);
               }
               i++;
             }
@@ -131,6 +139,15 @@ public class RpmSignPlugin extends Recorder {
     } else {
       listener.getLogger().println("[RpmSignPlugin] - Skipping signing RPMs ...");
     }
+  }
+
+  @Override
+  public boolean perform(AbstractBuild<?, ?> build, Launcher launcher, BuildListener listener) throws InterruptedException, IOException {
+    FilePath workspace = build.getWorkspace();
+    if (workspace == null) {
+      throw new AbortException("Could not get a workspace.");
+    }
+    perform(build, workspace, launcher, listener);
     return true;
   }
 
@@ -178,12 +195,12 @@ public class RpmSignPlugin extends Recorder {
     return baos.toByteArray();
   }
 
-  private void importGpgKey(String privateKey, AbstractBuild<?, ?> build, Launcher launcher, BuildListener listener) throws InterruptedException, IOException {
+  private void importGpgKey(String privateKey, Run<?, ?> build, final FilePath workspace, Launcher launcher, TaskListener listener) throws InterruptedException, IOException {
     ArgumentListBuilder command = new ArgumentListBuilder();
     command.add("gpg", "--import", "-");
     Launcher.ProcStarter ps = launcher.new ProcStarter();
     ps = ps.cmds(command).stdout(listener);
-    ps = ps.pwd(build.getWorkspace()).envs(build.getEnvironment(listener));
+    ps = ps.pwd(workspace).envs(build.getEnvironment(listener));
 
     try (InputStream is = new ByteArrayInputStream(privateKey.getBytes(StandardCharsets.UTF_8))) {
       ps.stdin(is);
@@ -192,19 +209,19 @@ public class RpmSignPlugin extends Recorder {
     }
   }
 
-  private boolean isGpgKeyAvailable(GpgKey gpgKey, AbstractBuild<?, ?> build, Launcher launcher, BuildListener listener) throws IOException, InterruptedException {
+  private boolean isGpgKeyAvailable(GpgKey gpgKey, Run<?, ?> build, final FilePath workspace, Launcher launcher, TaskListener listener) throws IOException, InterruptedException {
     ArgumentListBuilder command = new ArgumentListBuilder();
     command.add("gpg", "--fingerprint", gpgKey.getName());
     Launcher.ProcStarter ps = launcher.new ProcStarter();
     ps = ps.cmds(command).stdout(listener);
-    ps = ps.pwd(build.getWorkspace()).envs(build.getEnvironment(listener));
+    ps = ps.pwd(workspace).envs(build.getEnvironment(listener));
     Proc proc = launcher.launch(ps);
 
     return proc.join() == 0;
   }
 
   private GpgKey getGpgKey(String gpgKeyName) {
-    Jenkins jenkins = Jenkins.getInstance();
+    Jenkins jenkins = Jenkins.get();
     if (jenkins == null) {
       throw new IllegalStateException("Could not get a Jenkins instance.");
     }
@@ -220,6 +237,7 @@ public class RpmSignPlugin extends Recorder {
   }
 
   @Extension
+  @Symbol("rpmSign")
   @SuppressWarnings("unused")
   public static final class GpgSignerDescriptor extends BuildStepDescriptor<Publisher> {
 
@@ -273,16 +291,16 @@ public class RpmSignPlugin extends Recorder {
     }
 
     public FormValidation doCheckIncludes(@AncestorInPath AbstractProject project, @QueryParameter String value) throws IOException, InterruptedException {
-      FilePath workspace = project.getSomeWorkspace();
-      if (workspace != null) {
-        String msg = workspace.validateAntFileMask(value);
-        if (msg != null) {
-          return FormValidation.error(msg);
-        }
+//      FilePath workspace = project.getSomeWorkspace();
+//      if (workspace != null) {
+//        String msg = workspace.validateAntFileMask(value);
+//        if (msg != null) {
+//          return FormValidation.error(msg);
+//        }
         return FormValidation.ok();
-      } else {
-        return FormValidation.warning(Messages.noworkspace());
-      }
+//      } else {
+//        return FormValidation.warning(Messages.noworkspace());
+//      }
     }
 
   }

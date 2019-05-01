@@ -3,7 +3,7 @@
 
   <f:entry title="${%Sign RPMs}">
 
-    <f:repeatable var="rpms" items="${instance.entries}" minimum="${1}" add="${%Add RPM(s)}">
+    <f:repeatable var="rpms" items="${instance.rpms}" minimum="${1}" add="${%Add RPM(s)}">
 
       <table width="100%">
 
