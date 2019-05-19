@@ -45,15 +45,15 @@ public class RpmSignPlugin extends Recorder implements SimpleBuildStep {
   @DataBoundConstructor
   @SuppressWarnings("unused")
   public RpmSignPlugin(List<Rpm> rpms) {
-    this.rpms = rpms;
-    if (this.rpms == null) {
-      this.rpms = Collections.emptyList();
-    }
+    setRpms(rpms);
   }
 
   @DataBoundSetter
   public void setRpms(final List<Rpm> rpms) {
     this.rpms = rpms;
+    if (this.rpms == null) {
+      this.rpms = Collections.emptyList();
+    }
   }
 
   @Override
@@ -291,16 +291,7 @@ public class RpmSignPlugin extends Recorder implements SimpleBuildStep {
     }
 
     public FormValidation doCheckIncludes(@AncestorInPath AbstractProject project, @QueryParameter String value) throws IOException, InterruptedException {
-//      FilePath workspace = project.getSomeWorkspace();
-//      if (workspace != null) {
-//        String msg = workspace.validateAntFileMask(value);
-//        if (msg != null) {
-//          return FormValidation.error(msg);
-//        }
         return FormValidation.ok();
-//      } else {
-//        return FormValidation.warning(Messages.noworkspace());
-//      }
     }
 
   }
