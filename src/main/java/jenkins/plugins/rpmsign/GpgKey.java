@@ -35,8 +35,8 @@ public class GpgKey implements Serializable {
 
   public int getUniqueId() {
     int result = name != null ? name.hashCode() : 0;
-    result = 31 * result + (privateKey.getPlainText() != null ? privateKey.getPlainText().hashCode() : 0);
-    result = 31 * result + (passphrase.getPlainText() != null ? passphrase.getPlainText().hashCode() : 0);
+    result = 31 * result + privateKey.getPlainText().hashCode();
+    result = 31 * result + passphrase.getPlainText().hashCode();
     return result;
   }
 
