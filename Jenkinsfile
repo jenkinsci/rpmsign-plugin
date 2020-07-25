@@ -1,5 +1,1 @@
-buildPlugin(
-  jdkVersions: [8],
-  findbugs: [archive: true, unstableTotalAll: '0'],
-  checkstyle: [run: true, archive: true]
-)
+buildPlugin(jdkVersions: [8])
