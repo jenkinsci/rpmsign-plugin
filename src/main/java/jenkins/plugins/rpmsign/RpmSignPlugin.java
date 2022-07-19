@@ -7,6 +7,7 @@ import hudson.Proc;
 import hudson.model.AbstractBuild;
 import hudson.model.AbstractProject;
 import hudson.model.BuildListener;
+import hudson.model.Item;
 import hudson.model.Result;
 import hudson.tasks.BuildStepDescriptor;
 import hudson.tasks.BuildStepMonitor;
@@ -273,6 +274,7 @@ public class RpmSignPlugin extends Recorder {
     }
 
     public FormValidation doCheckIncludes(@AncestorInPath AbstractProject project, @QueryParameter String value) throws IOException, InterruptedException {
+      project.checkPermission(Item.WORKSPACE);
       FilePath workspace = project.getSomeWorkspace();
       if (workspace != null) {
         String msg = workspace.validateAntFileMask(value);
